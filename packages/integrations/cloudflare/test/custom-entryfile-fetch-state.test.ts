@@ -131,4 +131,11 @@ describe('Custom entry file using astro/fetch in dev', () => {
 		assert.equal(response.headers.get('X-Fetch-State-Entrypoint'), 'true');
 		assert.match(html, /astro-cloudflare-custom-entryfile-fetch-state/);
 	});
+
+	it('renders a prerendered page from a state built with new FetchState(request)', async () => {
+		const response = await fixture.fetch('/static');
+		const html = await response.text();
+		assert.equal(response.status, 200, html);
+		assert.match(html, /prerendered through workerd/);
+	});
 });

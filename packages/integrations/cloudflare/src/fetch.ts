@@ -79,6 +79,15 @@ export async function cf(
 	const staticAsset = matchStaticAsset(app!.manifest, state.request.url, env);
 	if (staticAsset) return staticAsset;
 
+	// A state built from a bare request resolves its route with the production
+	// matcher, which skips prerendered routes. In dev those pages aren't built
+	// assets yet, so match the way the default handler does.
+	// https://github.com/withastro/astro/issues/18744
+	if (app!.isDev()) {
+		const result = await app!.devMatch(app!.getPathnameFromRequest(state.request));
+		if (result) state.routeData = result.routeData;
+	}
+
 	if (!hasMatchingRoute(state)) {
 		const asset = await fallbackToAssets(state.request.url, env);
 		if (asset) return asset;
