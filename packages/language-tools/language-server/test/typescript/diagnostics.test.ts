@@ -103,6 +103,32 @@ describe('TypeScript - Diagnostics', async () => {
 		assert.strictEqual(diagnostics.items.length, 1);
 	});
 
+	it('reports named imports of an Astro component', async () => {
+		const document = await languageServer.openFakeDocument(
+			`---\nimport { BlogPost } from './src/components/BlogPost.astro';\nimport Image from './src/components/Image.astro';\n---\n<BlogPost /><Image />`,
+			'astro',
+		);
+		const diagnostics = (await languageServer.handle.sendDocumentDiagnosticRequest(
+			document.uri,
+		)) as FullDocumentDiagnosticReport;
+
+		assert.deepStrictEqual(
+			diagnostics.items
+				.filter((diagnostic) => diagnostic.source === 'astro')
+				.map((diagnostic) => ({ ...diagnostic, data: {} })),
+			[
+				{
+					data: {},
+					message:
+						"Astro components only have a default export. Use `import BlogPost from './src/components/BlogPost.astro'` instead.",
+					range: Range.create(1, 9, 1, 17),
+					severity: DiagnosticSeverity.Error,
+					source: 'astro',
+				},
+			],
+		);
+	});
+
 	it('does not report a local declaration conflict when importing Image from astro:assets', async () => {
 		const document = await languageServer.handle.openTextDocument(
 			path.join(fixtureDir, 'image.astro'),
