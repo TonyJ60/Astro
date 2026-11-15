@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import type * as unifont from 'unifont';
 import { FONT_FORMATS } from '../constants.js';
 import type { FontFileIdGenerator, FontTypeExtractor, UrlResolver } from '../definitions.js';
@@ -29,7 +30,13 @@ export function filterAndTransformFontFaces({
 					}
 					// We handle protocol relative URLs here; otherwise, they're considered absolute by the font
 					// fetcher which will try to read them from the file system
-					const originalUrl = source.url.startsWith('//') ? `https:${source.url}` : source.url;
+					// `file:` URLs (eg. from the npm provider with `remote: false`) are converted to paths
+					// so the font fetcher reads them from the file system
+					const originalUrl = source.url.startsWith('//')
+						? `https:${source.url}`
+						: source.url.startsWith('file:')
+							? fileURLToPath(source.url)
+							: source.url;
 					let format = FONT_FORMATS.find((e) => e.format === source.format);
 					if (!format) {
 						format = FONT_FORMATS.find((e) => e.type === fontTypeExtractor.extract(source.url))!;

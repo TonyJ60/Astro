@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { collectComponentData } from '../../../../dist/assets/fonts/core/collect-component-data.js';
 import { collectFontAssetsFromFaces } from '../../../../dist/assets/fonts/core/collect-font-assets-from-faces.js';
 import { collectFontData } from '../../../../dist/assets/fonts/core/collect-font-data.js';
@@ -904,6 +905,39 @@ describe('fonts core', () => {
 					},
 				],
 			);
+		});
+
+		it('turns file URLs into file system paths', () => {
+			const path = fileURLToPath(new URL('./font.woff2', import.meta.url));
+			const [font] = filterAndTransformFontFaces({
+				family: { cssVariable: '--foo' },
+				fonts: [
+					{
+						weight: '400',
+						style: 'normal',
+						src: [{ url: pathToFileURL(path).href, format: 'woff2' }],
+					},
+				],
+				fontFileIdGenerator: {
+					generate: ({ originalUrl }) => originalUrl,
+				},
+				fontTypeExtractor: {
+					extract: () => 'woff2',
+				},
+				urlResolver: {
+					resolve: (url) => 'resolved:' + url,
+					cspResources: [],
+					urls: [],
+				},
+			});
+			assert.deepStrictEqual(font.src, [
+				{
+					format: 'woff2',
+					originalURL: path,
+					url: 'resolved:' + path,
+					tech: undefined,
+				},
+			]);
 		});
 	});
 
