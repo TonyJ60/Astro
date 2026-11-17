@@ -668,8 +668,23 @@ if (inBrowser) {
 		});
 		// There's not a good way to record scroll position before a history back
 		// navigation, so we will record it when the user has stopped scrolling.
-		if ('onscrollend' in window) addEventListener('scrollend', onScrollEnd);
-		else {
+		if ('onscrollend' in window) {
+			// Every `scrollTo()` that moves the page fires "scrollend", so a scripted scroll
+			// animation ends on each frame. Save an isolated "scrollend" right away, but save
+			// a burst of them only once it has settled, skipping that save if a navigation
+			// changed the history entry meanwhile. Safari throws after 100 history writes per
+			// 10 seconds, which breaks link clicks. See #18761.
+			let settleId: number | undefined;
+			addEventListener('scrollend', () => {
+				if (settleId === undefined) onScrollEnd();
+				else clearTimeout(settleId);
+				const index = history.state?.index;
+				settleId = window.setTimeout(() => {
+					settleId = undefined;
+					if (index === history.state?.index) onScrollEnd();
+				}, 100);
+			});
+		} else {
 			// Keep track of state between intervals
 			let intervalId: number | undefined, lastY: number, lastX: number, lastIndex: State['index'];
 			const scrollInterval = () => {

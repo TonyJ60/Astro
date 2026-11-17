@@ -402,6 +402,33 @@ test.describe('View Transitions', () => {
 		expect(await page.evaluate(() => history.scrollRestoration)).toBe('manual');
 	});
 
+	test('Scroll animated with one scrollTo() per frame does not save the position every frame', async ({
+		page,
+		astro,
+	}) => {
+		await page.goto(astro.resolveUrl('/long-page'));
+		await expect(page.locator('#longpage')).toBeInViewport();
+
+		const writes = await page.evaluate(async () => {
+			let count = 0;
+			const replaceState = history.replaceState.bind(history);
+			history.replaceState = (...args) => {
+				count++;
+				replaceState(...args);
+			};
+			for (let y = 50; y <= 1000; y += 50) {
+				await new Promise(requestAnimationFrame);
+				window.scrollTo({ top: y, behavior: 'instant' });
+			}
+			await new Promise((resolve) => setTimeout(resolve, 500));
+			return count;
+		});
+
+		// One save when the scroll starts and one when it has settled
+		expect(writes).toBe(2);
+		expect(await page.evaluate(() => history.state.scrollY)).toBe(1000);
+	});
+
 	test('History navigation after a cancelled unload restores manual scroll restoration', async ({
 		page,
 		astro,
